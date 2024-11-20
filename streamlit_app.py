@@ -96,26 +96,23 @@ def post_tweet(client: tweepy.Client, content: str) -> None:
         if not content.strip():
             st.error("Please write something before posting!")
             st.stop()
-            
+
         if len(content) > 280:
             st.error("Tweet exceeds 280 characters limit!")
             st.stop()
-            
+
         response = client.create_tweet(text=content)
         tweet_id = response.data['id']
-        
-        # 使用markdown和HTML来创建一个固定的显示区域
+
         st.markdown("""
         <div style='padding: 1rem; border-radius: 0.5rem; background-color: #f0f2f6; margin: 1rem 0;'>
             <h3 style='color: #0066cc;'>✨ Tweet Posted Successfully!</h3>
         </div>
         """, unsafe_allow_html=True)
-        
-        # 显示详细的推文信息
+
         st.markdown("### Tweet Details")
         st.markdown("---")
-        
-        # 显示推文ID和链接
+
         col1, col2 = st.columns([1, 2])
         with col1:
             st.markdown("**Tweet ID:**")
@@ -123,27 +120,23 @@ def post_tweet(client: tweepy.Client, content: str) -> None:
         with col2:
             st.markdown("**View on X:**")
             st.markdown(f"🔗 [Click to view tweet](https://twitter.com/user/status/{tweet_id})")
-        
-        # 显示推文内容
+
         st.markdown("**Content:**")
         st.code(content, language=None)
-        
-        # 显示时间戳
+
         st.markdown("**Posted at:**")
         st.code(str(datetime.now()), language=None)
-        
-        # 防止页面刷新
+
         st.stop()
-            
-    except Exception as e:
+
+    except tweepy.TweepError as e:
         st.error(f"Error posting tweet: {str(e)}")
-        # 显示错误详情
         st.markdown("""
         <div style='padding: 1rem; border-radius: 0.5rem; background-color: #ffebee; margin: 1rem 0;'>
             <h3 style='color: #d32f2f;'>❌ Tweet Posting Failed</h3>
         </div>
         """, unsafe_allow_html=True)
-        
+
         st.markdown("### Error Details")
         st.markdown("---")
         st.markdown("**Error Message:**")
@@ -151,6 +144,7 @@ def post_tweet(client: tweepy.Client, content: str) -> None:
         st.markdown("**Time:**")
         st.code(str(datetime.now()), language=None)
         st.stop()
+
 
 def handle_tweet_button():
     st.session_state.show_tweet_button = True
