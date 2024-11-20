@@ -140,7 +140,7 @@ else:
         else:
             st.error("Failed to authenticate with Twitter.")
 
-def post_tweet(client: tweepy.Client, content: str) -> None:
+def post_tweet(client: tweepy.Client, content: str, media_id: str) -> None:
     try:
         if not content.strip():
             st.error("Please write something before posting!")
@@ -150,7 +150,7 @@ def post_tweet(client: tweepy.Client, content: str) -> None:
             st.error("Tweet exceeds 280 characters limit!")
             st.stop()
 
-        response = client.create_tweet(text=content)
+        response = client.create_tweet(text=content, media_ids=[media_id])
         tweet_id = response.data['id']
 
         st.markdown("""
@@ -380,6 +380,28 @@ def generate_image_from_text(image_prompt):
         st.error(f"Image Generation Error: {str(e)}")
         return None
 
+def upload_media(image_url: str, credentials: Dict[str, str]) -> Optional[str]:
+    url = "https://upload.twitter.com/1.1/media/upload.json"
+    headers = {
+        "Authorization": f"Bearer {credentials['bearer_token']}"
+    }
+
+    try:
+        response = requests.get(image_url)
+        response.raise_for_status()
+        image_data = response.content
+
+        files = {'media': image_data}
+        data = {'media_category': 'tweet_image'}
+
+        response = requests.post(url, headers=headers, files=files, data=data)
+        response.raise_for_status()
+        media_info = response.json()
+        return media_info['media_id_string']
+    except Exception as e:
+        st.error(f"Media Upload Error: {str(e)}")
+        return None
+
 def save_config(config_name, config_data):
     config_path = f"configs/{config_name}.json"
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
@@ -496,32 +518,39 @@ if st.button("🚀 AI Generate Meme Tweet"):
                 st.subheader("AI Generated Image")
                 st.image(image_url, caption="Generated Meme Tweet Image")
 
-                # 使用用户输入的认证信息
-                if 'client' in locals() and client:
-                    try:
-                        # 尝试发送推文
-                        response = client.create_tweet(text=tweet)
-                        tweet_id = response.data['id']
+                # 上传媒体
+                media_id = upload_media(image_url, tokens)
 
-                        # 显示成功信息
-                        st.success(f"Tweet posted successfully! Tweet ID: {tweet_id}")
-                        st.markdown(f"[View your tweet](https://twitter.com/user/status/{tweet_id})")
+                if media_id:
+                    # 使用用户输入的认证信息
+                    if 'client' in locals() and client:
+                        try:
+                            # 尝试发送推文
+                            response = client.create_tweet(text=tweet, media_ids=[media_id])
+                            tweet_id = response.data['id']
 
-                        # 显示发推按钮
-                        col1, col2 = st.columns([1, 4])
-                        with col1:
-                            st.button("🐦 Post Another Tweet")
+                            # 显示成功信息
+                            st.success(f"Tweet posted successfully! Tweet ID: {tweet_id}")
+                            st.markdown(f"[View your tweet](https://twitter.com/user/status/{tweet_id})")
 
-                    except Exception as e:
-                        # 显示错误信息
-                        st.error(f"Error posting tweet: {str(e)}")
+                            # 显示发推按钮
+                            col1, col2 = st.columns([1, 4])
+                            with col1:
+                                st.button("🐦 Post Another Tweet")
 
-                        # 显示重试按钮
-                        col1, col2 = st.columns([1, 4])
-                        with col1:
-                            st.button("🔄 Retry Posting")
+                        except Exception as e:
+                            # 显示错误信息
+                            st.error(f"Error posting tweet: {str(e)}")
+
+                            # 显示重试按钮
+                            col1, col2 = st.columns([1, 4])
+                            with col1:
+                                st.button("🔄 Retry Posting")
+                    else:
+                        st.error("Failed to authenticate with Twitter. Please check your credentials.")
                 else:
-                    st.error("Failed to authenticate with Twitter. Please check your credentials.")
+                    st.error("Failed to upload media.")
+
             else:
                 st.error("Failed to generate image.")
 
